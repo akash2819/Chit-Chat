@@ -55,7 +55,7 @@ int main(int argc, char const *argv[])
         {
             perror("accept");
             exit(EXIT_FAILURE);
-        }
+        } 
 
         printf("New client connected\n");
 
