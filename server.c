@@ -78,7 +78,7 @@ int main(int argc, char const *argv[])
             perror("accept");
             exit(EXIT_FAILURE);
         } 
-        printf("New client connected %d\n",new_socket);
+        printf("New client connected %d\n",new_socket -3);
         clients[new_socket-3]=new_socket;
         // Create a new thread to handle the connection
         pthread_t thread_id;
@@ -111,8 +111,8 @@ void *connection_handler(void *socket_desc)
     char client_message[MESSAGE_SIZE];
     
     // Send welcome message to the client
-    char *welcome_message = "Welcome to the Chit-Chat a chat room!\n Created By Akash Sharma\n";
-    send(sock, welcome_message, strlen(welcome_message), 0);
+    // char *welcome_message = "Welcome to the Chit-Chat a chat room!\n Created By Akash Sharma\n";
+    // send(sock, welcome_message, strlen(welcome_message), 0);
     
     // Receive message from the client
     while ((read_size = recv(sock , client_message , MESSAGE_SIZE , 0)) > 0 )
@@ -123,8 +123,11 @@ void *connection_handler(void *socket_desc)
         // Send the message to all connected clients
         for(int i = 0; i < MAX_CLIENTS; i++) {
             if(clients[i] != 0 && clients[i] != sock) {
-                send(clients[i], client_message, strlen(client_message), 0);
-                printf("Client %d: %s\n",sock-3,client_message);
+                char main_message[1034];
+                sprintf(main_message, "\nClient:%d ", sock-3);
+                 strcat(main_message, client_message);
+                send(clients[i], main_message ,strlen(main_message), 0);
+                // printf("Client %d: %s\n",sock-3,client_message);
             }
         }
         
@@ -136,7 +139,7 @@ void *connection_handler(void *socket_desc)
     }
      
     if(read_size == 0) {
-        printf("Client %d Dissconected ",sock-3);
+        printf("Client %d Dissconected \n ",sock-3);
         fflush(stdout);
     }
     else if(read_size == -1) {
