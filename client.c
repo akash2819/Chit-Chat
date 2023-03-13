@@ -93,7 +93,7 @@ void *receive_handler(void *socket_desc)
 
     while(1) {
         valread = read( sock , buffer, 1024);
-        printf("Server message: %s\n", buffer);
+        // printf("Server message: %s\n", buffer);
     }
 
     return NULL;

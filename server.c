@@ -5,15 +5,21 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
+#include <signal.h>
 
 #define PORT 8080
 #define MAX_CLIENTS 10 // Maximum number of clients that the server can handle
 #define MESSAGE_SIZE 1024
+#define client_count 0
 int clients[MAX_CLIENTS] = {0}; // Array to store client sockets
 fd_set active_fd_set;
 void remove_client(int sock, fd_set *active_fd_set);
 
 void *connection_handler(void *);
+void sigpipe_handler(int signum)
+{
+    // Do nothing
+}
 
 int main(int argc, char const *argv[])
 {
@@ -21,6 +27,7 @@ int main(int argc, char const *argv[])
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
+  signal(SIGPIPE, sigpipe_handler);
 
     // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
@@ -65,14 +72,14 @@ int main(int argc, char const *argv[])
     printf("Waiting for incoming connections...\n");
 
     while(1) {
+        int new_socket;
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0)
         {
             perror("accept");
             exit(EXIT_FAILURE);
         } 
-
-        printf("New client connected\n");
-
+        printf("New client connected %d\n",new_socket);
+        clients[new_socket-3]=new_socket;
         // Create a new thread to handle the connection
         pthread_t thread_id;
         if( pthread_create( &thread_id , NULL ,  connection_handler , (void*) &new_socket) < 0)
@@ -87,28 +94,6 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
-
-// void *connection_handler(void *socket_desc)
-// {
-//     int sock = *(int*)socket_desc;
-//     int valread;
-//     char buffer[1024] = {0};
-//     char message[1024] = {0};
-
-//     while(1) {
-//         valread = read( sock , buffer, 1024);
-//         printf("Client message: %s\n", buffer);
-        
-//         // Send the message to all the connected clients
-//         for(int i = 0; i < MAX_CLIENTS; i++) {
-//             if(clients[i] != 0 && clients[i] != sock) {
-//                 send(clients[i], buffer, strlen(buffer), 0);
-//             }
-//         }
-//     }
-
-//     return NULL;
-// }
 void remove_client(int sock, fd_set *active_fd_set) {
     // Remove the socket from the active file descriptor set
     FD_CLR(sock, active_fd_set);
@@ -139,18 +124,19 @@ void *connection_handler(void *socket_desc)
         for(int i = 0; i < MAX_CLIENTS; i++) {
             if(clients[i] != 0 && clients[i] != sock) {
                 send(clients[i], client_message, strlen(client_message), 0);
+                printf("Client %d: %s\n",sock-3,client_message);
             }
         }
         
         // Print the message received from the client
-        printf("Client %d: %s\n", sock, client_message);
+        printf("Client %d: %s\n",sock-3,client_message);
         
         // Clear the message buffer
         memset(client_message, 0, MESSAGE_SIZE);
     }
      
     if(read_size == 0) {
-        puts("Client disconnected");
+        printf("Client %d Dissconected ",sock-3);
         fflush(stdout);
     }
     else if(read_size == -1) {
@@ -161,7 +147,7 @@ void *connection_handler(void *socket_desc)
        remove_client(sock, &active_fd_set);
          
     // Free the socket descriptor
-    free(socket_desc);
+    // free(socket_desc);
          
     return 0;
 }
